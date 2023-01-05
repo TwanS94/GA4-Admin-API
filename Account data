@@ -1,0 +1,279 @@
+/**
+ * getting all basics
+ * 1. listing accounts: listAccounts()
+ * 2. listing properties: listWebProperties()
+ * 3. listing streams: listStreams()
+ ** the rule to trigger all three functions at once is in the General functions.gs file
+ */
+
+/*###########################################*/
+/*###########################################*/
+
+/** LIST ALL ACCOUNTS */
+function listAccounts() {
+
+    // Get all accounts with the UA API
+    let accounts = uaAPI.Management.Accounts.list();
+    let accountsList = accounts.items;
+
+    // Clean up the accounts sheet to not get any duplicates
+    activeSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    activeSpreadsheet.getSheetByName('accounts').clearContents();
+
+    // Define the output sheet and create headers
+    let outputsheet = SpreadsheetApp.getActive().getSheetByName("accounts");
+    let colheadersArr = [];
+    let colheaders = [
+        'created',
+        'updated',
+        'account ID',
+        'account name'
+    ]
+
+    // Set the headers in the first row of the output sheet and customize
+    colheadersArr.push(colheaders);
+    outputsheet.getRange(1, 1, 1, colheadersArr[0].length).setValues(colheadersArr).setBackground("#0b5394").setFontColor('#ffffff').setFontWeight('bold');
+
+    // Create an array for each parameter we are retrieving
+    let createArray = [];
+    updateArray = [];
+    idArray = [];
+    nameArray = [];
+
+    // Check the amount of available accounts and push the data to the arrays
+    for (let i = 0; i < accountsList.length; i++) {
+        createArray.push([accountsList[i].created]);
+        updateArray.push([accountsList[i].updated]);
+        idArray.push([accountsList[i].id]);
+        nameArray.push([accountsList[i].name]);
+    };
+
+    // Define where the data from the arrays should land in the sheet
+    var lr = outputsheet.getLastRow() + 1;
+    outputsheet.getRange(lr, 1, createArray.length, 1).setValues(createArray);
+    outputsheet.getRange(lr, 2, updateArray.length, 1).setValues(updateArray);
+    outputsheet.getRange(lr, 3, idArray.length, 1).setValues(idArray);
+    outputsheet.getRange(lr, 4, nameArray.length, 1).setValues(nameArray);
+}
+
+
+/** LIST GA4 WEB PROPERTIES */
+function listWebProperties() {
+
+    // Get all accounts with the UA API
+    let accounts = uaAPI.Management.Accounts.list()
+
+    if (!accounts.items || !accounts.items.length) {
+        Logger.log('No accounts found.');
+        return;
+    }
+
+    // Clean up the accounts sheet to not get any duplicates
+    activeSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    activeSpreadsheet.getSheetByName('properties').clearContents();
+
+    // Define the output sheet and create headers
+    let outputsheet = SpreadsheetApp.getActive().getSheetByName("properties");
+    let colheadersArr = [];
+    let colheaders = [
+        'created',
+        'updated',
+        'version',
+        'type',
+        'property ID',
+        'property name',
+        'account',
+        'currency',
+        'service level'
+    ]
+
+    // Set the headers in the first row of the output sheet and customize
+    colheadersArr.push(colheaders);
+    outputsheet.getRange(1, 1, 1, colheadersArr[0].length).setValues(colheadersArr).setBackground("#0b5394").setFontColor('#ffffff').setFontWeight('bold');
+
+    let createTimeArray = [],
+        updateTimeArray = [],
+        versionArray = [],
+        typeArray = [],
+        nameArray = [],
+        displayNameArray = [],
+        accountArray = [],
+        currencyCodeArray = [],
+        serviceLevelArray = []
+
+
+    // Check for the amount of accounts and use each account ID to retrieve the properties with the GA4 Admin API
+    let accountsList = accounts.items;
+
+    for (let i = 0; i < accountsList.length; i++) {
+        let properties = ga4Admin.Properties.list({
+            filter: 'parent:accounts/' + accountsList[i].id
+        });
+
+        // Check if the property has an object with details about the property
+        // Create an array for each parameter we are retrieving
+        if (properties.properties) {
+            let innerProperties = properties.properties;
+
+            if (innerProperties !== null) {
+                for (let j = 0; j < innerProperties.length; j++) {
+                    createTimeArray.push([innerProperties[j].createTime]);
+                    updateTimeArray.push([innerProperties[j].updateTime]);
+                    versionArray.push(['GA4']);
+                    typeArray.push([
+                        [innerProperties[j].propertyType]
+                    ])
+                    nameArray.push([innerProperties[j].name]);
+                    displayNameArray.push([innerProperties[j].displayName]);
+                    accountArray.push([innerProperties[j].account]);
+                    currencyCodeArray.push([innerProperties[j].currencyCode]);
+                    serviceLevelArray.push([innerProperties[j].serviceLevel]);
+                }
+            }
+        }
+        // }
+    }
+
+    // Clean up values in arrays 
+    nameArray = nameArray.map(innerArr => innerArr.map(elem => elem.replace('properties/', '')));
+    accountArray = accountArray.map(innerArr => innerArr.map(elem => elem.replace('accounts/', '')));
+    serviceLevelArray = serviceLevelArray.map(innerArr => innerArr.map(elem => elem.replace('GOOGLE_ANALYTICS_STANDARD', 'Standard')));
+    serviceLevelArray = serviceLevelArray.map(innerArr => innerArr.map(elem => elem.replace('GOOGLE_ANALYTICS_360', '360')));
+    //typeArray = typeArray.map(innerArr => innerArr.map(elem => elem.replace('PROPERTY_TYPE_UNSPECIFIED', 'Unknown')));
+    //typeArray = typeArray.map(innerArr => innerArr.map(elem => elem.replace('PROPERTY_TYPE_ORDINARY', 'Regular property')));
+    //typeArray = typeArray.map(innerArr => innerArr.map(elem => elem.replace('PROPERTY_TYPE_SUBPROPERTY', 'Subproperty')));
+    //typeArray = typeArray.map(innerArr => innerArr.map(elem => elem.replace('PROPERTY_TYPE_ROLLUP', 'Roll-up property')));
+
+    // Define where the data from the arrays should land in the sheet
+    var lr = outputsheet.getLastRow() + 1;
+
+    outputsheet.getRange(lr, 1, createTimeArray.length, 1).setValues(createTimeArray);
+    outputsheet.getRange(lr, 2, updateTimeArray.length, 1).setValues(updateTimeArray);
+    outputsheet.getRange(lr, 3, versionArray.length, 1).setValues(versionArray);
+    outputsheet.getRange(lr, 4, typeArray.length, 1).setValues(typeArray);
+    outputsheet.getRange(lr, 5, nameArray.length, 1).setValues(nameArray);
+    outputsheet.getRange(lr, 6, displayNameArray.length, 1).setValues(displayNameArray);
+    outputsheet.getRange(lr, 7, accountArray.length, 1).setValues(accountArray);
+    outputsheet.getRange(lr, 8, currencyCodeArray.length, 1).setValues(currencyCodeArray);
+    outputsheet.getRange(lr, 9, serviceLevelArray.length, 1).setValues(serviceLevelArray);
+}
+
+
+/** LIST ACCOUNTS, PROPERTIES AND STREAMS */
+function listStreams() {
+
+    // Get all accounts with the UA API
+    let accounts = uaAPI.Management.Accounts.list()
+
+    if (!accounts.items || !accounts.items.length) {
+        Logger.log('No accounts found.');
+        return;
+    }
+
+    // Clean up the streams sheet to not get any duplicates
+    activeSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    activeSpreadsheet.getSheetByName('streams').clearContents();
+
+    // Define the output sheet and create headers
+    let outputsheet = SpreadsheetApp.getActive().getSheetByName("streams");
+    SpreadsheetApp.getActiveSpreadsheet().toast('⚙️ Getting All Your Analytics Streams... grab a cup of ☕☕☕', 'Please wait', 10)
+
+    let colheadersArr = [];
+    let colheaders = [
+        'stream created',
+        'stream updated',
+        'account',
+        'account ID',
+        'property',
+        'property ID',
+        'stream',
+        'stream ID',
+        'stream type',
+        'measurement ID/app ID'
+    ]
+
+    // Set the headers in the first row of the output sheet and customize
+    colheadersArr.push(colheaders);
+    outputsheet.getRange(1, 1, 1, colheadersArr[0].length).setValues(colheadersArr).setBackground("#0b5394").setFontColor('#ffffff').setFontWeight('bold');
+
+    let createTimeArray = [],
+        updateTimeArray = [],
+        accountsArray = [],
+        accountsIdArray = [],
+        propertyArray = [],
+        propertyIdArray = [],
+        streamsArray = [],
+        streamsIdArray = [],
+        typeArray = [],
+        measurementIdArray = []
+
+    // Check for the amount of accounts and use each account ID to retrieve the properties with the GA4 Admin API
+    let accountsList = accounts.items;
+
+    for (let i = 0; i < accountsList.length; i++) {
+        let properties = ga4Admin.Properties.list({
+            filter: 'parent:accounts/' + accountsList[i].id
+        })
+
+        // Check if the property has an object with details about the property
+        // Pull the property ID from the property details for each property
+        // List the streams with the GA4 Admin API by using the property ID
+        // Create an array for each parameter we are retrieving
+        if (properties.properties) {
+            let innerProperties = properties.properties;
+
+            for (let j = 0; j < innerProperties.length; j++) {
+                if (innerProperties[j] !== null) {
+                    propertyID = innerProperties[j].name;
+                    let streams = ga4Admin.Properties.DataStreams.list(propertyID);
+
+                    if (streams.dataStreams) {
+                        let streamsList = streams.dataStreams;
+
+                        // Loop through the data streams
+                        for (let k = 0; k < streamsList.length; k++) {
+                            // Get the data stream ID
+                            let streamID = streamsList[k].name.replace(/.+\/dataStreams\//, '');
+                            let propertyID = streamsList[k].name.replace(/\/dataStreams\/.+/, '');
+                            let propertyIDclean = propertyID.replace(/properties\//, '');
+                            createTimeArray.push([streamsList[k].createTime])
+                            updateTimeArray.push([streamsList[k].updateTime]);
+                            accountsArray.push([accountsList[i].name]); //new
+                            accountsIdArray.push([accountsList[i].id]);
+                            propertyArray.push([innerProperties[j].displayName]);
+                            propertyIdArray.push([propertyIDclean]);
+                            streamsArray.push([streamsList[k].displayName]);
+                            streamsIdArray.push([streamID]);
+                            typeArray.push([streamsList[k].type]);
+
+                            let measurementId = null;
+                            if (streamsList[k].type === 'WEB_DATA_STREAM') {
+                                measurementId = streamsList[k].webStreamData.measurementId;
+                            } else if (streamsList[k].type === 'IOS_APP_DATA_STREAM') {
+                                measurementId = streamsList[k].iosAppStreamData.bundleId || 'n/a';
+                            } else if (streamsList[k].type === 'ANDROID_APP_DATA_STREAM') {
+                                measurementId = streamsList[k].androidAppStreamData.packageName || 'n/a';
+                            }
+                            measurementIdArray.push([measurementId]);
+                        }
+
+                    }
+                }
+            }
+        }
+    }
+
+    // Define where the data from the arrays should land in the sheet
+    var lr = outputsheet.getLastRow() + 1;
+
+    outputsheet.getRange(lr, 1, createTimeArray.length, 1).setValues(createTimeArray);
+    outputsheet.getRange(lr, 2, updateTimeArray.length, 1).setValues(updateTimeArray);
+    outputsheet.getRange(lr, 3, accountsArray.length, 1).setValues(accountsArray);
+    outputsheet.getRange(lr, 4, accountsIdArray.length, 1).setValues(accountsIdArray);
+    outputsheet.getRange(lr, 5, propertyArray.length, 1).setValues(propertyArray);
+    outputsheet.getRange(lr, 6, propertyIdArray.length, 1).setValues(propertyIdArray);
+    outputsheet.getRange(lr, 7, streamsArray.length, 1).setValues(streamsArray);
+    outputsheet.getRange(lr, 8, streamsIdArray.length, 1).setValues(streamsIdArray);
+    outputsheet.getRange(lr, 9, typeArray.length, 1).setValues(typeArray);
+    outputsheet.getRange(lr, 10, measurementIdArray.length, 1).setValues(measurementIdArray);
+}
