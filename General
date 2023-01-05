@@ -1,0 +1,58 @@
+/** Function to clean sheets and/or recreate tabs */
+function createInputSheets() {
+    activeSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    if (activeSpreadsheet.getSheetByName('accounts') == null) {
+        getAccountDataSheet = activeSpreadsheet.insertSheet();
+        getAccountDataSheet.setName('accounts').setTabColor("#4F5165");
+    }
+    if (activeSpreadsheet.getSheetByName('properties') == null) {
+        getAccountDataSheet = activeSpreadsheet.insertSheet();
+        getAccountDataSheet.setName('properties').setTabColor("#547AA5");
+    }
+    if (activeSpreadsheet.getSheetByName('streams') == null) {
+        getAccountDataSheet = activeSpreadsheet.insertSheet();
+        getAccountDataSheet.setName('streams').setTabColor("#50D8D7");
+    } else {
+        activeSpreadsheet.getSheetByName('accounts').clearContents();
+        activeSpreadsheet.getSheetByName('properties').clearContents();
+        activeSpreadsheet.getSheetByName('streams').clearContents();
+    }
+};
+
+/** Function to clean everything, recreate tabs and pull accounts, properties and streams */
+function startFromScratch() {
+    activeSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    if (activeSpreadsheet.getSheetByName('accounts') == null) {
+        getAccountDataSheet = activeSpreadsheet.insertSheet();
+        getAccountDataSheet.setName('accounts').setTabColor("#4F5165");
+    }
+    if (activeSpreadsheet.getSheetByName('properties') == null) {
+        getAccountDataSheet = activeSpreadsheet.insertSheet();
+        getAccountDataSheet.setName('properties').setTabColor("#547AA5");
+    }
+    if (activeSpreadsheet.getSheetByName('streams') == null) {
+        getAccountDataSheet = activeSpreadsheet.insertSheet();
+        getAccountDataSheet.setName('streams').setTabColor("#50D8D7");
+    } else {
+        activeSpreadsheet.getSheetByName('accounts').clearContents();
+        activeSpreadsheet.getSheetByName('properties').clearContents();
+        activeSpreadsheet.getSheetByName('streams').clearContents();
+
+        SpreadsheetApp.getActiveSpreadsheet().toast('⚙️ Getting a lot of data. Time to go for a walk 🚶‍♀️🚶☕', 'Please wait', 15)
+        listAccounts();
+        listWebProperties();
+        listStreams();
+    }
+};
+
+/** Create menu */
+function onOpen() {
+    var ui = SpreadsheetApp.getUi();
+    ui.createMenu('⚙️ Get Started ⚙️')
+        .addItem('0. Clean or recreate tabs 🔄', 'createInputSheets')
+        .addItem('1. Get Accounts 👪', 'listAccounts')
+        .addItem('2. Get GA4 Properties 😎', 'listWebProperties')
+        .addItem('3. Get GA4 Streams ⚡', 'listStreams')
+        .addItem('4. Get everything from scratch ⚡⚡⚡', 'startFromScratch')
+        .addToUi();
+};
